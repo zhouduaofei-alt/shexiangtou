@@ -1,0 +1,1371 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Lumina 视界</title>
+<style>
+  :root {
+    color-scheme: dark;
+    --bg: #0c0d0b;
+    --ivory: #f4f0e6;
+    --muted: #9c9688;
+    --gold: #c6a36a;
+    --gold-2: #e7d3a4;
+    --line: rgba(232, 220, 196, 0.14);
+    --panel: rgba(255, 255, 255, 0.03);
+  }
+
+  * { box-sizing: border-box; }
+  html, body { height: 100%; margin: 0; }
+  body {
+    display: flex;
+    flex-direction: column;
+    color: var(--ivory);
+    font-family: "Segoe UI Variable Display", "Segoe UI", "Microsoft YaHei UI", sans-serif;
+    background:
+      radial-gradient(880px 420px at 8% -8%, rgba(198, 163, 106, 0.16), transparent 58%),
+      radial-gradient(640px 480px at 110% 110%, rgba(92, 102, 74, 0.16), transparent 52%),
+      var(--bg);
+    user-select: none;
+    overflow: hidden;
+  }
+
+  button, select { font: inherit; color: inherit; }
+  button { cursor: pointer; }
+  button:focus-visible, select:focus-visible {
+    outline: 1px solid var(--gold-2);
+    outline-offset: 2px;
+  }
+
+  header {
+    height: 78px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 28px;
+    border-bottom: 1px solid var(--line);
+    flex: none;
+  }
+
+  .brand { display: flex; align-items: center; gap: 14px; }
+  .mark {
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    border: 1.5px solid var(--gold);
+    position: relative;
+  }
+  .mark::after {
+    content: "";
+    position: absolute;
+    inset: 5px;
+    border-radius: 50%;
+    border: 1.5px solid var(--gold-2);
+  }
+  .name {
+    font-family: "Palatino Linotype", Palatino, "Times New Roman", serif;
+    letter-spacing: 0.42em;
+    font-size: 15px;
+    line-height: 1;
+    padding-left: 2px;
+  }
+  .sub {
+    margin-top: 6px;
+    color: var(--muted);
+    font-size: 12px;
+    letter-spacing: 0.28em;
+  }
+
+  .live {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    height: 36px;
+    padding: 0 14px 0 12px;
+    border-radius: 999px;
+    border: 1px solid var(--line);
+    background: rgba(0, 0, 0, 0.25);
+    color: var(--muted);
+    font-size: 13px;
+    letter-spacing: 0.08em;
+  }
+  .live i {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #5c584e;
+  }
+  .live.on { color: var(--ivory); }
+  .live.on i {
+    background: #d5f5a2;
+    animation: pulse 1.8s ease-out infinite;
+  }
+  .live em { font-style: normal; color: var(--gold-2); letter-spacing: 0.04em; }
+  .head-actions { display: flex; align-items: center; gap: 12px; }
+  @keyframes pulse {
+    0% { box-shadow: 0 0 0 0 rgba(213, 245, 162, 0.55); }
+    100% { box-shadow: 0 0 0 8px transparent; }
+  }
+
+  main {
+    flex: 1;
+    min-height: 0;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 372px;
+    gap: 18px;
+    padding: 18px 22px 22px;
+  }
+
+  .stage {
+    position: relative;
+    min-width: 0;
+    min-height: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 6px 8px 8px 6px;
+  }
+  .stage::before {
+    content: "";
+    position: absolute;
+    width: 52%;
+    height: 46%;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(198, 163, 106, 0.18), transparent 68%);
+    filter: blur(10px);
+    pointer-events: none;
+  }
+
+  .finder {
+    position: relative;
+    background: #070807;
+    border-radius: 26px;
+    overflow: hidden;
+    box-shadow:
+      0 30px 70px rgba(0, 0, 0, 0.38),
+      inset 0 0 0 1px rgba(255, 255, 255, 0.06);
+  }
+  .finder.anim {
+    transition: width 0.32s cubic-bezier(.22, .8, .2, 1), height 0.32s cubic-bezier(.22, .8, .2, 1);
+  }
+
+  #video, #beauty {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    object-fit: contain;
+    background: #000;
+    z-index: 1;
+  }
+  #beauty { display: none; pointer-events: none; }
+  body.beauty #video { opacity: 0; }
+  body.beauty #beauty { display: block; }
+
+  .corners span {
+    position: absolute;
+    width: 22px;
+    height: 22px;
+    border: 1.5px solid rgba(231, 211, 164, 0.9);
+    z-index: 2;
+    pointer-events: none;
+  }
+  .corners span:nth-child(1) { top: 16px; left: 16px; border-right: 0; border-bottom: 0; }
+  .corners span:nth-child(2) { top: 16px; right: 16px; border-left: 0; border-bottom: 0; }
+  .corners span:nth-child(3) { bottom: 16px; left: 16px; border-right: 0; border-top: 0; }
+  .corners span:nth-child(4) { bottom: 16px; right: 16px; border-left: 0; border-top: 0; }
+
+  .hud {
+    position: absolute;
+    left: 18px;
+    right: 18px;
+    bottom: 16px;
+    z-index: 2;
+    display: flex;
+    justify-content: space-between;
+    color: rgba(244, 240, 230, 0.86);
+    font-size: 12px;
+    letter-spacing: 0.14em;
+    text-shadow: 0 1px 8px rgba(0, 0, 0, 0.6);
+    pointer-events: none;
+  }
+
+  .flash {
+    position: absolute;
+    inset: 0;
+    background: #fff;
+    opacity: 0;
+    z-index: 4;
+    pointer-events: none;
+  }
+  .flash.go { animation: flash 0.42s ease; }
+  @keyframes flash {
+    0% { opacity: 0.82; }
+    100% { opacity: 0; }
+  }
+
+  .veil {
+    position: absolute;
+    inset: 0;
+    z-index: 5;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 14px;
+    padding: 28px;
+    text-align: center;
+    background:
+      radial-gradient(420px 220px at 50% 42%, rgba(198, 163, 106, 0.12), transparent 70%),
+      rgba(7, 8, 7, 0.72);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s ease;
+  }
+  .veil.show { opacity: 1; pointer-events: auto; }
+  .veil p {
+    margin: 0;
+    max-width: 360px;
+    line-height: 1.7;
+    letter-spacing: 0.06em;
+    color: var(--ivory);
+  }
+  .veil-mark {
+    width: 46px;
+    height: 46px;
+    border-radius: 50%;
+    border: 1px solid var(--gold);
+    box-shadow: inset 0 0 0 8px rgba(198, 163, 106, 0.18);
+  }
+
+  aside {
+    min-height: 0;
+    overflow: hidden;
+    border-radius: 28px;
+    border: 1px solid var(--line);
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.045), rgba(255, 255, 255, 0.02));
+    padding: 16px 16px 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+  .scroll {
+    flex: 1;
+    min-height: 0;
+    overflow: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    padding-right: 4px;
+  }
+
+  .kicker {
+    display: block;
+    margin-bottom: 10px;
+    color: var(--muted);
+    font-size: 12px;
+    letter-spacing: 0.22em;
+  }
+  .hint { color: var(--muted); font-size: 12px; letter-spacing: 0.04em; }
+
+  select {
+    width: 100%;
+    appearance: none;
+    background: #171814 url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'><path fill='%23e7d3a4' d='M1 1l5 5 5-5'/></svg>") no-repeat right 14px center;
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    padding: 13px 36px 13px 14px;
+  }
+  option { background: #171814; }
+
+  .orients { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .orient, .preset, .rots button, .ghost, .text-btn {
+    border: 1px solid transparent;
+    background: rgba(255, 255, 255, 0.035);
+  }
+  .orient {
+    height: 72px;
+    border-radius: 16px;
+    color: var(--muted);
+  }
+  .orient.on, .preset.on, .rots button.on {
+    color: var(--ivory);
+    border-color: rgba(198, 163, 106, 0.75);
+    background: rgba(198, 163, 106, 0.12);
+  }
+  .shape {
+    display: block;
+    margin: 0 auto 8px;
+    border: 1.5px solid currentColor;
+    border-radius: 3px;
+  }
+  .shape.land { width: 30px; height: 18px; }
+  .shape.port { width: 18px; height: 28px; }
+  .orient span { letter-spacing: 0.18em; font-size: 14px; }
+
+  .rots { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-top: 10px; }
+  .rots button {
+    height: 36px;
+    border-radius: 11px;
+    color: var(--muted);
+    letter-spacing: 0.04em;
+  }
+
+  .presets { display: flex; flex-direction: column; gap: 8px; }
+  .preset {
+    width: 100%;
+    display: grid;
+    grid-template-columns: 64px 1fr auto;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    border-radius: 14px;
+    text-align: left;
+    color: var(--ivory);
+  }
+  .preset b { font-weight: 600; letter-spacing: 0.06em; }
+  .preset small, .preset em { color: var(--muted); font-style: normal; font-size: 12px; }
+  .preset.on em { color: var(--gold-2); }
+  .actual {
+    min-height: 18px;
+    margin: 8px 2px 0;
+    color: var(--gold-2);
+    font-size: 12px;
+    letter-spacing: 0.08em;
+  }
+
+  .row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+  }
+  .switch {
+    width: 52px;
+    height: 30px;
+    border: 0;
+    border-radius: 999px;
+    background: #2a2b26;
+    position: relative;
+    flex: none;
+  }
+  .switch::after {
+    content: "";
+    position: absolute;
+    top: 3px;
+    left: 3px;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background: #d9d3c6;
+    transition: transform 0.2s ease;
+  }
+  .switch.on { background: #8c7044; }
+  .switch.on::after { transform: translateX(22px); background: var(--gold-2); }
+
+  .foot { margin-top: auto; display: flex; flex-direction: column; align-items: center; gap: 8px; }
+  .shutter {
+    width: 86px;
+    height: 86px;
+    border-radius: 50%;
+    border: 2px solid var(--gold);
+    background: radial-gradient(circle at 40% 35%, #3a3428, #12110e 68%);
+    display: grid;
+    place-items: center;
+    margin-top: 6px;
+  }
+  .shutter span {
+    width: 62px;
+    height: 62px;
+    border-radius: 50%;
+    background: linear-gradient(180deg, #f6edd9, #c6a36a);
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.35);
+  }
+  .shutter:active { transform: scale(0.96); }
+  .shortcut { margin: 0; color: var(--muted); font-size: 12px; letter-spacing: 0.06em; }
+  .levels { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-top: 10px; }
+  .levels button {
+    height: 34px;
+    border-radius: 11px;
+    border: 1px solid transparent;
+    background: rgba(255, 255, 255, 0.035);
+    color: var(--muted);
+  }
+  .levels button.on {
+    color: var(--ivory);
+    border-color: rgba(198, 163, 106, 0.75);
+    background: rgba(198, 163, 106, 0.12);
+  }
+  input[type="range"] {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 100%;
+    height: 4px;
+    border-radius: 99px;
+    background: #2c2d28;
+    margin: 4px 0 0;
+  }
+  input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: var(--gold-2);
+    border: 0;
+    cursor: pointer;
+  }
+  .expand {
+    display: none;
+    position: fixed;
+    top: 16px;
+    right: 16px;
+    z-index: 8;
+    height: 36px;
+    padding: 0 14px;
+    border-radius: 999px;
+    border: 1px solid rgba(231, 211, 164, 0.45);
+    background: rgba(12, 13, 11, 0.72);
+    color: var(--ivory);
+    letter-spacing: 0.14em;
+  }
+  body.compact { background: #000; }
+  body.compact header,
+  body.compact aside { display: none; }
+  body.compact main { display: block; padding: 0; }
+  body.compact .stage { height: 100%; padding: 0; }
+  body.compact .stage::before,
+  body.compact .corners,
+  body.compact .hud { display: none; }
+  body.compact .finder {
+    border-radius: 0;
+    box-shadow: none;
+  }
+  body.compact .expand { display: inline-flex; align-items: center; }
+  .ghost {
+    width: 100%;
+    height: 42px;
+    border-radius: 14px;
+    border: 1px solid var(--line);
+    letter-spacing: 0.16em;
+    color: var(--ivory);
+    background: transparent;
+  }
+  .ghost:hover, .orient:hover, .preset:hover, .rots button:hover { border-color: rgba(231, 211, 164, 0.35); }
+
+  .text-btn {
+    border: 0;
+    background: transparent;
+    color: var(--ivory);
+    letter-spacing: 0.14em;
+    padding: 8px 16px;
+    border-radius: 999px;
+    border: 1px solid var(--line);
+  }
+
+  #toast {
+    position: fixed;
+    left: 50%;
+    top: 92px;
+    transform: translateX(-50%) translateY(-8px);
+    opacity: 0;
+    pointer-events: none;
+    padding: 12px 18px;
+    border-radius: 999px;
+    background: rgba(20, 18, 14, 0.92);
+    border: 1px solid rgba(231, 211, 164, 0.35);
+    color: var(--ivory);
+    letter-spacing: 0.08em;
+    transition: 0.25s ease;
+    z-index: 9;
+  }
+  #toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+  ::-webkit-scrollbar { width: 10px; }
+  ::-webkit-scrollbar-thumb { background: rgba(231, 211, 164, 0.28); border-radius: 99px; }
+
+  @media (prefers-reduced-motion: reduce) {
+    .finder.anim, .switch::after, #toast, .veil { transition: none; }
+    .live.on i, .flash.go { animation: none; }
+  }
+</style>
+</head>
+<body>
+  <header>
+    <div class="brand">
+      <div class="mark"></div>
+      <div>
+        <div class="name">LUMINA</div>
+        <div class="sub">视界相机</div>
+      </div>
+    </div>
+    <div class="head-actions">
+      <button id="compactTop" class="text-btn" type="button">简洁</button>
+      <div class="live" id="live"><i></i><span id="liveText">待机</span><em id="fps">—</em></div>
+    </div>
+  </header>
+  <main>
+    <section class="stage" id="stage">
+      <div class="finder" id="finder">
+        <video id="video" autoplay playsinline muted disablepictureinpicture></video>
+        <canvas id="beauty"></canvas>
+        <div class="corners" aria-hidden="true"><span></span><span></span><span></span><span></span></div>
+        <div class="hud"><span id="hudRes">—</span><span id="hudOrient">横屏</span></div>
+        <div class="flash" id="flash"></div>
+        <div class="veil show" id="veil">
+          <div class="veil-mark"></div>
+          <p id="veilText">正在连接镜头</p>
+          <button id="retry" class="text-btn" type="button" hidden>重新连接</button>
+        </div>
+      </div>
+    </section>
+    <aside>
+      <div class="scroll">
+      <label>
+        <span class="kicker">摄像头</span>
+        <select id="device"></select>
+      </label>
+
+      <section>
+        <span class="kicker">画面方向</span>
+        <div class="orients">
+          <button id="land" class="orient on" type="button"><i class="shape land"></i><span>横屏</span></button>
+          <button id="port" class="orient" type="button"><i class="shape port"></i><span>竖屏</span></button>
+        </div>
+        <div class="rots" id="rots">
+          <button type="button" data-rot="0">0°</button>
+          <button type="button" data-rot="90">90°</button>
+          <button type="button" data-rot="180">180°</button>
+          <button type="button" data-rot="270">270°</button>
+        </div>
+      </section>
+
+      <section>
+        <span class="kicker">分辨率</span>
+        <div class="presets" id="presets"></div>
+        <div class="actual" id="actual"></div>
+      </section>
+
+      <section>
+        <div class="row">
+          <span class="kicker" style="margin:0">美颜</span>
+          <span class="hint" id="beautyVal">关闭</span>
+        </div>
+        <input id="beautyRange" type="range" min="0" max="100" value="0" aria-label="美颜强度" />
+        <div class="levels" id="beautyLevels">
+          <button type="button" data-b="0" data-e="0">关闭</button>
+          <button type="button" data-b="35" data-e="48">自然</button>
+          <button type="button" data-b="60" data-e="70">柔光</button>
+          <button type="button" data-b="85" data-e="88">通透</button>
+        </div>
+        <div class="row" style="margin-top:14px">
+          <span class="kicker" style="margin:0">去眼袋</span>
+          <span class="hint" id="eyeVal">关闭</span>
+        </div>
+        <input id="eyeRange" type="range" min="0" max="100" value="0" aria-label="去眼袋强度" />
+        <div class="hint" style="margin-top:6px">正对镜头时，会按眼下位置减淡黑眼圈</div>
+      </section>
+
+      <div class="row">
+        <div>
+          <span class="kicker" style="margin-bottom:4px">镜像</span>
+          <div class="hint">左右翻转画面</div>
+        </div>
+        <button id="mirror" class="switch" type="button" aria-pressed="false" aria-label="镜像"></button>
+      </div>
+      </div>
+
+      <div class="foot">
+        <button id="shoot" class="shutter" type="button" aria-label="拍摄"><span></span></button>
+        <p class="shortcut">空格拍摄 · C 简洁 · H 横屏 · V 竖屏</p>
+        <button id="compact" class="ghost" type="button">简洁模式</button>
+        <button id="album" class="ghost" type="button">打开相册</button>
+      </div>
+    </aside>
+  </main>
+  <button id="expand" class="expand" type="button">展开</button>
+  <div id="toast"></div>
+<script>
+const PRESETS = [
+  { id: "4k", name: "4K", w: 3840, h: 2160, note: "极致" },
+  { id: "2k", name: "2K", w: 2560, h: 1440, note: "细腻" },
+  { id: "1080", name: "1080P", w: 1920, h: 1080, note: "清晰" },
+  { id: "720", name: "720P", w: 1280, h: 720, note: "流畅" },
+  { id: "480", name: "480P", w: 640, h: 480, note: "极速" }
+];
+
+const video = document.getElementById("video");
+const beautyCanvas = document.getElementById("beauty");
+const finder = document.getElementById("finder");
+const deviceEl = document.getElementById("device");
+
+let stream = null;
+let deviceId = "";
+let preset = PRESETS[3];
+let rotation = 0;
+let mirrored = false;
+let filling = false;
+let chain = Promise.resolve();
+let fpsGen = 0;
+let toastTimer = 0;
+
+function enqueue(fn) {
+  chain = chain.then(fn, fn);
+  return chain;
+}
+
+function toast(text) {
+  const el = document.getElementById("toast");
+  el.textContent = text;
+  el.classList.add("show");
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.classList.remove("show"), 2200);
+}
+
+function errText(err) {
+  const name = err && err.name;
+  if (name === "NotAllowedError") return "系统没有允许使用摄像头。请在 Windows 隐私设置中打开相机权限。";
+  if (name === "NotFoundError" || name === "NotFound") return "没有找到可用的摄像头。";
+  if (name === "NotReadableError") return "摄像头正被其他程序占用，请先关掉占用它的软件。";
+  if (name === "OverconstrainedError") return "当前分辨率不受支持。";
+  return "无法打开摄像头。";
+}
+
+function setLive(on) {
+  document.getElementById("live").classList.toggle("on", on);
+  document.getElementById("liveText").textContent = on ? "取景中" : "待机";
+  if (!on) document.getElementById("fps").textContent = "—";
+}
+
+function setVeil(show, text, retry) {
+  document.getElementById("veil").classList.toggle("show", show);
+  if (text) document.getElementById("veilText").textContent = text;
+  document.getElementById("retry").hidden = !retry;
+}
+
+function currentRatio() {
+  let w = video.videoWidth || 16;
+  let h = video.videoHeight || 9;
+  if (rotation % 180 !== 0) {
+    const t = w; w = h; h = t;
+  }
+  return w / h;
+}
+
+function fitFinder() {
+  const stage = document.getElementById("stage");
+  const cs = getComputedStyle(stage);
+  const sw = stage.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight);
+  const sh = stage.clientHeight - parseFloat(cs.paddingTop) - parseFloat(cs.paddingBottom);
+  if (sw < 40 || sh < 40) return;
+  const ratio = currentRatio();
+  let w = sw;
+  let h = w / ratio;
+  if (h > sh) {
+    h = sh;
+    w = h * ratio;
+  }
+  finder.style.width = Math.max(120, Math.round(w)) + "px";
+  finder.style.height = Math.max(120, Math.round(h)) + "px";
+  layoutVideo();
+}
+
+function layoutVideo() {
+  const fw = finder.clientWidth;
+  const fh = finder.clientHeight;
+  const side = rotation % 180 !== 0;
+  const sx = mirrored ? -1 : 1;
+  const transform = "translate(-50%, -50%) rotate(" + rotation + "deg) scaleX(" + sx + ")";
+  [video, beautyCanvas].forEach((el) => {
+    el.style.width = (side ? fh : fw) + "px";
+    el.style.height = (side ? fw : fh) + "px";
+    el.style.transform = transform;
+  });
+}
+
+function sourcePortrait() {
+  const w = video.videoWidth || 16;
+  const h = video.videoHeight || 9;
+  return h > w;
+}
+
+function displayedPortrait() {
+  const swapped = rotation % 180 !== 0;
+  return swapped ? !sourcePortrait() : sourcePortrait();
+}
+
+function syncOrient() {
+  const portrait = displayedPortrait();
+  document.getElementById("land").classList.toggle("on", !portrait);
+  document.getElementById("port").classList.toggle("on", portrait);
+  document.querySelectorAll("[data-rot]").forEach((el) => {
+    el.classList.toggle("on", Number(el.dataset.rot) === rotation);
+  });
+  document.getElementById("hudOrient").textContent = (portrait ? "竖屏" : "横屏") + (mirrored ? " · 镜像" : "");
+}
+
+function setDisplayPortrait(wantPortrait) {
+  setRotation(wantPortrait === sourcePortrait() ? 0 : 90);
+}
+
+function setRotation(deg) {
+  rotation = ((deg % 360) + 360) % 360;
+  finder.classList.add("anim");
+  syncOrient();
+  fitFinder();
+  clearTimeout(setRotation._t);
+  setRotation._t = setTimeout(() => finder.classList.remove("anim"), 360);
+}
+
+function toggleMirror() {
+  mirrored = !mirrored;
+  const btn = document.getElementById("mirror");
+  btn.classList.toggle("on", mirrored);
+  btn.setAttribute("aria-pressed", mirrored ? "true" : "false");
+  syncOrient();
+  layoutVideo();
+}
+
+function renderPresets() {
+  const box = document.getElementById("presets");
+  box.innerHTML = "";
+  PRESETS.forEach((p) => {
+    const b = document.createElement("button");
+    b.type = "button";
+    b.className = "preset" + (p.id === preset.id ? " on" : "");
+    b.innerHTML = "<b>" + p.name + "</b><small>" + p.w + " × " + p.h + "</small><em>" + p.note + "</em>";
+    b.addEventListener("click", () => enqueue(() => choosePreset(p)));
+    box.appendChild(b);
+  });
+}
+
+function stopStream() {
+  if (!stream) return;
+  stream.getTracks().forEach((t) => t.stop());
+  stream = null;
+}
+
+function startFps() {
+  const gen = ++fpsGen;
+  if (!("requestVideoFrameCallback" in video)) return;
+  let frames = 0;
+  let last = performance.now();
+  const tick = (now) => {
+    if (gen !== fpsGen || !stream) return;
+    drawBeauty();
+    frames++;
+    if (now - last >= 500) {
+      const fps = Math.round((frames * 1000) / (now - last));
+      document.getElementById("fps").textContent = fps + " FPS";
+      frames = 0;
+      last = now;
+    }
+    video.requestVideoFrameCallback(tick);
+  };
+  video.requestVideoFrameCallback(tick);
+}
+
+function readSettings(silent) {
+  const track = stream && stream.getVideoTracks()[0];
+  if (!track) return;
+  const s = track.getSettings();
+  const w = s.width || 0;
+  const h = s.height || 0;
+  document.getElementById("hudRes").textContent = w ? (w + " × " + h) : "—";
+  const rate = s.frameRate ? (" · " + Math.round(s.frameRate) + " FPS") : "";
+  document.getElementById("actual").textContent = w ? ("当前输出 " + w + " × " + h + rate) : "";
+  syncOrient();
+  fitFinder();
+}
+
+async function refreshDevices() {
+  if (!navigator.mediaDevices) return;
+  const cams = (await navigator.mediaDevices.enumerateDevices()).filter((d) => d.kind === "videoinput");
+  const prev = deviceId || (stream && stream.getVideoTracks()[0].getSettings().deviceId) || "";
+  filling = true;
+  deviceEl.innerHTML = "";
+  if (!cams.length) {
+    const o = document.createElement("option");
+    o.textContent = "未检测到摄像头";
+    deviceEl.appendChild(o);
+    filling = false;
+    return;
+  }
+  cams.forEach((d, i) => {
+    const o = document.createElement("option");
+    o.value = d.deviceId;
+    o.textContent = d.label || ("摄像头 " + (i + 1));
+    deviceEl.appendChild(o);
+  });
+  if (prev && cams.some((d) => d.deviceId === prev)) deviceId = prev;
+  else deviceId = cams[0].deviceId;
+  deviceEl.value = deviceId;
+  filling = false;
+}
+
+async function openStream(silent) {
+  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+    throw { name: "NotFound" };
+  }
+  setVeil(true, "正在连接镜头");
+  stopStream();
+  const videoConstraints = {
+    width: { ideal: preset.w },
+    height: { ideal: preset.h },
+    frameRate: { ideal: 30 },
+    aspectRatio: { ideal: preset.w / preset.h }
+  };
+  if (deviceId) videoConstraints.deviceId = { exact: deviceId };
+  let media;
+  try {
+    media = await navigator.mediaDevices.getUserMedia({ audio: false, video: videoConstraints });
+  } catch (err) {
+    if (!err || err.name !== "OverconstrainedError") throw err;
+    const loose = deviceId ? { deviceId: { exact: deviceId } } : true;
+    media = await navigator.mediaDevices.getUserMedia({ audio: false, video: loose });
+  }
+  stream = media;
+  video.srcObject = stream;
+  try {
+    await video.play();
+  } catch (_) {
+    setVeil(true, "点击开始取景", true);
+    document.getElementById("retry").textContent = "开始取景";
+    await refreshDevices();
+    readSettings(true);
+    return;
+  }
+  document.getElementById("retry").textContent = "重新连接";
+  await refreshDevices();
+  readSettings(silent);
+  startFps();
+  setLive(true);
+  setVeil(false);
+}
+
+async function connect(silent) {
+  try {
+    await openStream(silent);
+  } catch (err) {
+    setLive(false);
+    document.getElementById("fps").textContent = "—";
+    document.getElementById("hudRes").textContent = "—";
+    document.getElementById("actual").textContent = "";
+    setVeil(true, errText(err), true);
+    document.getElementById("retry").textContent = "重新连接";
+  }
+}
+
+async function choosePreset(p) {
+  preset = p;
+  renderPresets();
+  await connect(false);
+}
+
+async function shoot() {
+  if (!video.videoWidth) {
+    toast("画面还没准备好");
+    return;
+  }
+  const flash = document.getElementById("flash");
+  flash.classList.remove("go");
+  void flash.offsetWidth;
+  flash.classList.add("go");
+  drawBeauty();
+  const vw = video.videoWidth;
+  const vh = video.videoHeight;
+  const side = rotation % 180 !== 0;
+  const canvas = document.createElement("canvas");
+  canvas.width = side ? vh : vw;
+  canvas.height = side ? vw : vh;
+  const ctx = canvas.getContext("2d");
+  ctx.translate(canvas.width / 2, canvas.height / 2);
+  ctx.rotate((rotation * Math.PI) / 180);
+  if (mirrored) ctx.scale(-1, 1);
+  const source = beautyAmount > 0.01 && gl ? beautyCanvas : video;
+  ctx.drawImage(source, -vw / 2, -vh / 2, vw, vh);
+  const data = canvas.toDataURL("image/jpeg", 0.92);
+  try {
+    if (typeof savePhoto === "function") {
+      await savePhoto(data);
+      toast("已保存到相册");
+    } else {
+      const a = document.createElement("a");
+      a.href = data;
+      a.download = "Lumina.jpg";
+      a.click();
+    }
+  } catch (e) {
+    toast(typeof e === "string" ? e : "保存失败");
+  }
+}
+
+document.getElementById("land").addEventListener("click", () => setDisplayPortrait(false));
+document.getElementById("port").addEventListener("click", () => setDisplayPortrait(true));
+document.getElementById("rots").addEventListener("click", (e) => {
+  const btn = e.target.closest("[data-rot]");
+  if (btn) setRotation(Number(btn.dataset.rot));
+});
+document.getElementById("mirror").addEventListener("click", toggleMirror);
+document.getElementById("shoot").addEventListener("click", () => enqueue(shoot));
+document.getElementById("album").addEventListener("click", () => {
+  if (typeof openAlbumFolder === "function") openAlbumFolder();
+});
+document.getElementById("retry").addEventListener("click", () => enqueue(async () => {
+  if (stream) {
+    try {
+      await video.play();
+      setVeil(false);
+      setLive(true);
+      startFps();
+    } catch (err) {
+      setVeil(true, errText(err), true);
+    }
+    return;
+  }
+  await connect(true);
+}));
+deviceEl.addEventListener("change", () => {
+  if (filling) return;
+  deviceId = deviceEl.value;
+  enqueue(() => connect(true));
+});
+document.addEventListener("keydown", (e) => {
+  if (e.target.closest("select, input, textarea")) return;
+  if (e.code === "Space") { e.preventDefault(); enqueue(shoot); }
+  else if (e.key === "h" || e.key === "H") setDisplayPortrait(false);
+  else if (e.key === "v" || e.key === "V") setDisplayPortrait(true);
+  else if (e.key === "m" || e.key === "M") toggleMirror();
+  else if (e.key === "c" || e.key === "C") toggleCompact();
+  else if (e.key === "Escape" && document.body.classList.contains("compact")) toggleCompact(false);
+});
+video.addEventListener("loadedmetadata", () => { syncOrient(); fitFinder(); });
+window.addEventListener("resize", fitFinder);
+new ResizeObserver(fitFinder).observe(document.getElementById("stage"));
+
+let beautyAmount = 0;
+let eyeAmount = 0;
+let gl = null;
+let progH = null;
+let progV = null;
+let progC = null;
+let quadBuf = null;
+let camTex = null;
+let blurTex = null;
+let softTex = null;
+let maskTex = null;
+let blurFB = null;
+let softFB = null;
+let viewW = 0;
+let viewH = 0;
+const loc = {};
+
+function initBeauty() {
+  if (gl) return true;
+  gl = beautyCanvas.getContext("webgl", {
+    alpha: false,
+    antialias: false,
+    depth: false,
+    stencil: false,
+    preserveDrawingBuffer: false,
+    powerPreference: "high-performance"
+  });
+  if (!gl) return false;
+  const vs = "attribute vec2 a;varying vec2 v;void main(){v=a*0.5+0.5;gl_Position=vec4(a,0.0,1.0);}";
+  const blurFS = [
+    "precision mediump float;",
+    "uniform sampler2D uTex;uniform vec2 uTexel;uniform float uRadius;uniform float uAxis;",
+    "varying vec2 v;",
+    "void main(){",
+    "vec3 c=texture2D(uTex,v).rgb;vec3 sum=c;float wsum=1.0;",
+    "for(int i=1;i<=6;i++){",
+    "float fi=float(i);",
+    "vec2 o=vec2(uTexel.x*(1.0-uAxis),uTexel.y*uAxis)*fi*uRadius;",
+    "vec3 a=texture2D(uTex,v+o).rgb;vec3 b=texture2D(uTex,v-o).rgb;",
+    "float wa=exp(-dot(a-c,a-c)*14.0);float wb=exp(-dot(b-c,b-c)*14.0);",
+    "sum+=a*wa+b*wb;wsum+=wa+wb;}",
+    "gl_FragColor=vec4(sum/wsum,1.0);}"
+  ].join("");
+  const compFS = [
+    "precision mediump float;",
+    "uniform sampler2D uCam;uniform sampler2D uSoft;uniform sampler2D uMask;",
+    "uniform vec2 uTexel;uniform float uStrength;uniform float uEye;uniform float uHasFace;",
+    "varying vec2 v;",
+    "void main(){",
+    "vec3 c=texture2D(uCam,v).rgb;",
+    "vec3 soft=texture2D(uSoft,v).rgb;",
+    "vec3 m=texture2D(uMask,v).rgb;",
+    "m+=texture2D(uMask,v+vec2(uTexel.x*6.0,0.0)).rgb*0.35;",
+    "m+=texture2D(uMask,v-vec2(uTexel.x*6.0,0.0)).rgb*0.35;",
+    "m+=texture2D(uMask,v+vec2(0.0,uTexel.y*6.0)).rgb*0.35;",
+    "m+=texture2D(uMask,v-vec2(0.0,uTexel.y*6.0)).rgb*0.35;",
+    "m/=2.4;",
+    "float lumaC=dot(c,vec3(0.299,0.587,0.114));",
+    "float lumaS=dot(soft,vec3(0.299,0.587,0.114));",
+    "float edge=smoothstep(0.012,0.08,abs(lumaC-lumaS));",
+    "float faceSkin=m.r*(1.0-m.b);",
+    "float skin=mix(1.0-edge,faceSkin,uHasFace);",
+    "float bag=m.g*(1.0-m.b)*uHasFace;",
+    "float high=lumaC-lumaS;",
+    "float smoothAmt=uStrength*skin*mix(0.78,1.0,bag);",
+    "vec3 color=mix(c,soft,clamp(smoothAmt,0.0,0.92));",
+    "color+=vec3(high*mix(0.7,0.16,bag)*(uHasFace>0.5?skin:1.0));",
+    "float shadow=smoothstep(0.72,0.25,lumaC);",
+    "vec3 filled=soft+vec3(0.07,0.05,0.035)*(1.0-lumaS);",
+    "color=mix(color,filled,clamp(bag*uEye*shadow,0.0,0.82));",
+    "color.r+=0.03*bag*uEye;color.b-=0.04*bag*uEye*shadow;",
+    "float whiten=uStrength*(uHasFace>0.5?skin:0.55)*(1.0-lumaC);",
+    "color+=vec3(0.085,0.07,0.055)*whiten;",
+    "color.r+=0.02*uStrength*(uHasFace>0.5?skin:0.4);",
+    "color=(color-0.5)*mix(1.0,0.94,uStrength)+0.5;",
+    "gl_FragColor=vec4(clamp(color,0.0,1.0),1.0);}"
+  ].join("");
+  function make(fs) {
+    function shader(type, src) {
+      const sh = gl.createShader(type);
+      gl.shaderSource(sh, src);
+      gl.compileShader(sh);
+      if (!gl.getShaderParameter(sh, gl.COMPILE_STATUS)) return null;
+      return sh;
+    }
+    const p = gl.createProgram();
+    const vsh = shader(gl.VERTEX_SHADER, vs);
+    const fsh = shader(gl.FRAGMENT_SHADER, fs);
+    if (!vsh || !fsh) return null;
+    gl.attachShader(p, vsh);
+    gl.attachShader(p, fsh);
+    gl.bindAttribLocation(p, 0, "a");
+    gl.linkProgram(p);
+    if (!gl.getProgramParameter(p, gl.LINK_STATUS)) return null;
+    return p;
+  }
+  progH = make(blurFS);
+  progV = make(blurFS);
+  progC = make(compFS);
+  if (!progH || !progV || !progC) {
+    gl = null;
+    return false;
+  }
+  quadBuf = gl.createBuffer();
+  gl.bindBuffer(gl.ARRAY_BUFFER, quadBuf);
+  gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 1, -1, -1, 1, 1, 1]), gl.STATIC_DRAW);
+  function tex() {
+    const t = gl.createTexture();
+    gl.bindTexture(gl.TEXTURE_2D, t);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+    return t;
+  }
+  camTex = tex();
+  blurTex = tex();
+  softTex = tex();
+  maskTex = tex();
+  gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 1, 1, 0, gl.RGBA, gl.UNSIGNED_BYTE, new Uint8Array([0, 0, 0, 255]));
+  blurFB = gl.createFramebuffer();
+  softFB = gl.createFramebuffer();
+  gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
+  loc.hTex = gl.getUniformLocation(progH, "uTex");
+  loc.hTexel = gl.getUniformLocation(progH, "uTexel");
+  loc.hRadius = gl.getUniformLocation(progH, "uRadius");
+  loc.hAxis = gl.getUniformLocation(progH, "uAxis");
+  loc.vTex = gl.getUniformLocation(progV, "uTex");
+  loc.vTexel = gl.getUniformLocation(progV, "uTexel");
+  loc.vRadius = gl.getUniformLocation(progV, "uRadius");
+  loc.vAxis = gl.getUniformLocation(progV, "uAxis");
+  loc.cam = gl.getUniformLocation(progC, "uCam");
+  loc.soft = gl.getUniformLocation(progC, "uSoft");
+  loc.mask = gl.getUniformLocation(progC, "uMask");
+  loc.cTexel = gl.getUniformLocation(progC, "uTexel");
+  loc.strength = gl.getUniformLocation(progC, "uStrength");
+  loc.eye = gl.getUniformLocation(progC, "uEye");
+  loc.face = gl.getUniformLocation(progC, "uHasFace");
+  return true;
+}
+
+function bindQuad() {
+  gl.bindBuffer(gl.ARRAY_BUFFER, quadBuf);
+  gl.enableVertexAttribArray(0);
+  gl.vertexAttribPointer(0, 2, gl.FLOAT, false, 0, 0);
+}
+
+function ensureTargets(w, h) {
+  if (viewW === w && viewH === h) return;
+  viewW = w;
+  viewH = h;
+  beautyCanvas.width = w;
+  beautyCanvas.height = h;
+  [blurTex, softTex].forEach((t) => {
+    gl.bindTexture(gl.TEXTURE_2D, t);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, w, h, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
+  });
+  gl.bindFramebuffer(gl.FRAMEBUFFER, blurFB);
+  gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, blurTex, 0);
+  gl.bindFramebuffer(gl.FRAMEBUFFER, softFB);
+  gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, softTex, 0);
+  gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+}
+
+function drawBeauty() {
+  if ((beautyAmount <= 0.01 && eyeAmount <= 0.01) || !video.videoWidth) return;
+  if (!initBeauty()) return;
+  const w = video.videoWidth;
+  const h = video.videoHeight;
+  ensureTargets(w, h);
+  bindQuad();
+  gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
+  gl.bindTexture(gl.TEXTURE_2D, camTex);
+  gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, video);
+  let hasFace = 0;
+  if (typeof window.paintFaceMaskSync === "function") {
+    const painted = window.paintFaceMaskSync(video);
+    if (painted) {
+      gl.bindTexture(gl.TEXTURE_2D, maskTex);
+      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, painted);
+      hasFace = 1;
+    }
+  }
+  const radius = (1.15 + Math.max(beautyAmount, eyeAmount * 0.65) * 2.6) * Math.min(Math.max(w, h) / 720, 2.4);
+  gl.bindFramebuffer(gl.FRAMEBUFFER, blurFB);
+  gl.viewport(0, 0, w, h);
+  gl.useProgram(progH);
+  gl.activeTexture(gl.TEXTURE0);
+  gl.bindTexture(gl.TEXTURE_2D, camTex);
+  gl.uniform1i(loc.hTex, 0);
+  gl.uniform2f(loc.hTexel, 1 / w, 1 / h);
+  gl.uniform1f(loc.hRadius, radius);
+  gl.uniform1f(loc.hAxis, 0);
+  gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+  gl.bindFramebuffer(gl.FRAMEBUFFER, softFB);
+  gl.useProgram(progV);
+  gl.bindTexture(gl.TEXTURE_2D, blurTex);
+  gl.uniform1i(loc.vTex, 0);
+  gl.uniform2f(loc.vTexel, 1 / w, 1 / h);
+  gl.uniform1f(loc.vRadius, radius);
+  gl.uniform1f(loc.vAxis, 1);
+  gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+  gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+  gl.viewport(0, 0, w, h);
+  gl.useProgram(progC);
+  gl.activeTexture(gl.TEXTURE0);
+  gl.bindTexture(gl.TEXTURE_2D, camTex);
+  gl.activeTexture(gl.TEXTURE1);
+  gl.bindTexture(gl.TEXTURE_2D, softTex);
+  gl.activeTexture(gl.TEXTURE2);
+  gl.bindTexture(gl.TEXTURE_2D, maskTex);
+  gl.uniform1i(loc.cam, 0);
+  gl.uniform1i(loc.soft, 1);
+  gl.uniform1i(loc.mask, 2);
+  gl.uniform2f(loc.cTexel, 1 / w, 1 / h);
+  gl.uniform1f(loc.strength, beautyAmount);
+  gl.uniform1f(loc.eye, eyeAmount);
+  gl.uniform1f(loc.face, hasFace);
+  gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+}
+
+function syncBeautyClass() {
+  const on = beautyAmount > 0.01 || eyeAmount > 0.01;
+  document.body.classList.toggle("beauty", on);
+  if (on && typeof window.startFaceTracker === "function") window.startFaceTracker();
+}
+
+function setBeauty(value) {
+  const n = Math.max(0, Math.min(100, Math.round(Number(value))));
+  beautyAmount = n / 100;
+  const range = document.getElementById("beautyRange");
+  if (Number(range.value) !== n) range.value = String(n);
+  document.getElementById("beautyVal").textContent = n === 0 ? "关闭" : String(n);
+  document.querySelectorAll("[data-b]").forEach((el) => {
+    el.classList.toggle("on", Number(el.dataset.b) === n);
+  });
+  syncBeautyClass();
+  if (!onBeauty()) return;
+  drawBeauty();
+}
+
+function setEye(value) {
+  const n = Math.max(0, Math.min(100, Math.round(Number(value))));
+  eyeAmount = n / 100;
+  const range = document.getElementById("eyeRange");
+  if (Number(range.value) !== n) range.value = String(n);
+  document.getElementById("eyeVal").textContent = n === 0 ? "关闭" : String(n);
+  syncBeautyClass();
+  if (!onBeauty()) return;
+  drawBeauty();
+}
+
+function onBeauty() {
+  if (beautyAmount <= 0.01 && eyeAmount <= 0.01) return false;
+  if (!initBeauty()) {
+    toast("当前环境无法开启美颜");
+    beautyAmount = 0;
+    eyeAmount = 0;
+    document.body.classList.remove("beauty");
+    return false;
+  }
+  return true;
+}
+
+function toggleCompact(force) {
+  const on = typeof force === "boolean" ? force : !document.body.classList.contains("compact");
+  document.body.classList.toggle("compact", on);
+  document.getElementById("compact").textContent = on ? "退出简洁" : "简洁模式";
+  requestAnimationFrame(fitFinder);
+}
+
+document.getElementById("beautyRange").addEventListener("input", (e) => setBeauty(e.target.value));
+document.getElementById("eyeRange").addEventListener("input", (e) => setEye(e.target.value));
+document.getElementById("beautyLevels").addEventListener("click", (e) => {
+  const btn = e.target.closest("[data-b]");
+  if (!btn) return;
+  setBeauty(btn.dataset.b);
+  if (btn.dataset.e != null) setEye(btn.dataset.e);
+});
+document.getElementById("compact").addEventListener("click", () => toggleCompact());
+document.getElementById("compactTop").addEventListener("click", () => toggleCompact());
+document.getElementById("expand").addEventListener("click", () => toggleCompact(false));
+finder.addEventListener("dblclick", (e) => {
+  if (e.target.closest("button")) return;
+  toggleCompact();
+});
+
+renderPresets();
+syncOrient();
+setBeauty(0);
+fitFinder();
+enqueue(() => connect(true));
+</script>
+<script type="module">
+import { FaceLandmarker, FilesetResolver } from "/vendor/vision_bundle.mjs";
+
+const FACE = [10,338,297,332,284,251,389,356,454,323,361,288,397,365,379,378,400,377,152,148,176,149,150,136,172,58,132,93,234,127,162,21,54,103,67,109];
+const LEFT_EYE = [33,7,163,144,145,153,154,155,133,173,157,158,159,160,161,246];
+const RIGHT_EYE = [263,249,390,373,374,380,381,382,362,398,384,385,386,387,388,466];
+const LEFT_LOWER = [33,7,163,144,145,153,154,155,133];
+const RIGHT_LOWER = [263,249,390,373,374,380,381,382,362];
+const LIPS = [61,146,91,181,84,17,314,405,321,375,291,308,324,318,402,317,14,87,178,88,95];
+const LBROW = [70,63,105,66,107,55,65,52,53,46];
+const RBROW = [300,293,334,296,336,285,295,282,283,276];
+
+const mask = document.createElement("canvas");
+const mctx = mask.getContext("2d");
+let landmarker = null;
+let loading = null;
+let points = null;
+let lastDetect = 0;
+let seenAt = 0;
+let failed = false;
+
+function shape(indices, pts, w, h) {
+  mctx.beginPath();
+  indices.forEach((index, n) => {
+    const p = pts[index];
+    const x = p.x * w;
+    const y = p.y * h;
+    if (n === 0) mctx.moveTo(x, y);
+    else mctx.lineTo(x, y);
+  });
+  mctx.closePath();
+}
+
+function underEye(indices, pts, w, h) {
+  const top = indices.map((index) => ({ x: pts[index].x * w, y: pts[index].y * h }));
+  let minY = top[0].y;
+  let maxY = top[0].y;
+  top.forEach((p) => {
+    minY = Math.min(minY, p.y);
+    maxY = Math.max(maxY, p.y);
+  });
+  const drop = Math.max(8, (maxY - minY) * 1.45);
+  mctx.beginPath();
+  top.forEach((p, n) => n === 0 ? mctx.moveTo(p.x, p.y) : mctx.lineTo(p.x, p.y));
+  for (let i = top.length - 1; i >= 0; i--) mctx.lineTo(top[i].x, top[i].y + drop);
+  mctx.closePath();
+}
+
+function redraw(w, h) {
+  if (mask.width !== w || mask.height !== h) {
+    mask.width = w;
+    mask.height = h;
+  }
+  mctx.clearRect(0, 0, w, h);
+  mctx.fillStyle = "#ff0000";
+  shape(FACE, points, w, h);
+  mctx.fill();
+  mctx.fillStyle = "#ffff00";
+  underEye(LEFT_LOWER, points, w, h);
+  mctx.fill();
+  underEye(RIGHT_LOWER, points, w, h);
+  mctx.fill();
+  mctx.fillStyle = "#0000ff";
+  shape(LEFT_EYE, points, w, h);
+  mctx.fill();
+  shape(RIGHT_EYE, points, w, h);
+  mctx.fill();
+  shape(LIPS, points, w, h);
+  mctx.fill();
+  shape(LBROW, points, w, h);
+  mctx.fill();
+  shape(RBROW, points, w, h);
+  mctx.fill();
+}
+
+async function ensureTracker() {
+  if (landmarker || failed) return landmarker;
+  if (loading) return loading;
+  loading = (async () => {
+    const files = await FilesetResolver.forVisionTasks("/vendor/wasm");
+    landmarker = await FaceLandmarker.createFromOptions(files, {
+      baseOptions: {
+        modelAssetPath: "/vendor/face_landmarker.task",
+        delegate: "GPU"
+      },
+      runningMode: "VIDEO",
+      numFaces: 1,
+      minFaceDetectionConfidence: 0.5,
+      minFacePresenceConfidence: 0.5,
+      minTrackingConfidence: 0.5
+    });
+    return landmarker;
+  })().catch(() => {
+    failed = true;
+    loading = null;
+    landmarker = null;
+    return null;
+  });
+  return loading;
+}
+
+window.startFaceTracker = function () { ensureTracker(); };
+
+window.paintFaceMaskSync = function (videoEl) {
+  const w = videoEl.videoWidth;
+  const h = videoEl.videoHeight;
+  if (!w || !landmarker) return points ? mask : null;
+  const now = performance.now();
+  if (now - lastDetect > 80) {
+    lastDetect = now;
+    let result = null;
+    try { result = landmarker.detectForVideo(videoEl, now); } catch (_) { result = null; }
+    const found = result && result.faceLandmarks && result.faceLandmarks[0];
+    if (found) {
+      const raw = found;
+      seenAt = now;
+      if (!points || points.length !== raw.length) {
+        points = raw.map((p) => ({ x: p.x, y: p.y }));
+      } else {
+        for (let i = 0; i < raw.length; i++) {
+          points[i].x += (raw[i].x - points[i].x) * 0.5;
+          points[i].y += (raw[i].y - points[i].y) * 0.5;
+        }
+      }
+      redraw(w, h);
+    } else if (now - seenAt > 500) {
+      points = null;
+    }
+  }
+  return points ? mask : null;
+};
+</script>
+</body>
+</html>
