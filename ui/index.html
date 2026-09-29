@@ -552,10 +552,10 @@
         </div>
         <input id="beautyRange" type="range" min="0" max="100" value="0" aria-label="美颜强度" />
         <div class="levels" id="beautyLevels">
-          <button type="button" data-b="0" data-e="0">关闭</button>
-          <button type="button" data-b="35" data-e="48">自然</button>
-          <button type="button" data-b="60" data-e="70">柔光</button>
-          <button type="button" data-b="85" data-e="88">通透</button>
+          <button type="button" data-b="0" data-e="0" data-l="0" data-t="0">关闭</button>
+          <button type="button" data-b="35" data-e="48" data-l="28" data-t="22">自然</button>
+          <button type="button" data-b="60" data-e="70" data-l="48" data-t="40">柔光</button>
+          <button type="button" data-b="85" data-e="88" data-l="64" data-t="55">通透</button>
         </div>
         <div class="row" style="margin-top:14px">
           <span class="kicker" style="margin:0">去眼袋</span>
@@ -563,6 +563,17 @@
         </div>
         <input id="eyeRange" type="range" min="0" max="100" value="0" aria-label="去眼袋强度" />
         <div class="hint" style="margin-top:6px">正对镜头时，会按眼下位置减淡黑眼圈</div>
+        <div class="row" style="margin-top:14px">
+          <span class="kicker" style="margin:0">唇色</span>
+          <span class="hint" id="lipVal">关闭</span>
+        </div>
+        <input id="lipRange" type="range" min="0" max="100" value="0" aria-label="唇色强度" />
+        <div class="row" style="margin-top:14px">
+          <span class="kicker" style="margin:0">牙齿美白</span>
+          <span class="hint" id="teethVal">关闭</span>
+        </div>
+        <input id="teethRange" type="range" min="0" max="100" value="0" aria-label="牙齿美白强度" />
+        <div class="hint" style="margin-top:6px">唇色只铺在嘴唇上。张嘴后，牙齿美白只提亮牙，不染到舌头</div>
       </section>
 
       <div class="row">
@@ -881,7 +892,7 @@ async function shoot() {
   ctx.translate(canvas.width / 2, canvas.height / 2);
   ctx.rotate((rotation * Math.PI) / 180);
   if (mirrored) ctx.scale(-1, 1);
-  const source = beautyAmount > 0.01 && gl ? beautyCanvas : video;
+  const source = effectOn() && gl ? beautyCanvas : video;
   ctx.drawImage(source, -vw / 2, -vh / 2, vw, vh);
   const data = canvas.toDataURL("image/jpeg", 0.92);
   try {
@@ -944,6 +955,12 @@ new ResizeObserver(fitFinder).observe(document.getElementById("stage"));
 
 let beautyAmount = 0;
 let eyeAmount = 0;
+let lipAmount = 0;
+let teethAmount = 0;
+
+function effectOn() {
+  return beautyAmount > 0.01 || eyeAmount > 0.01 || lipAmount > 0.01 || teethAmount > 0.01;
+}
 let gl = null;
 let progH = null;
 let progV = null;
@@ -953,6 +970,7 @@ let camTex = null;
 let blurTex = null;
 let softTex = null;
 let maskTex = null;
+let makeupTex = null;
 let blurFB = null;
 let softFB = null;
 let viewW = 0;
@@ -986,8 +1004,8 @@ function initBeauty() {
   ].join("");
   const compFS = [
     "precision mediump float;",
-    "uniform sampler2D uCam;uniform sampler2D uSoft;uniform sampler2D uMask;",
-    "uniform vec2 uTexel;uniform float uStrength;uniform float uEye;uniform float uHasFace;",
+    "uniform sampler2D uCam;uniform sampler2D uSoft;uniform sampler2D uMask;uniform sampler2D uMakeup;",
+    "uniform vec2 uTexel;uniform float uStrength;uniform float uEye;uniform float uHasFace;uniform float uLip;uniform float uTeeth;",
     "varying vec2 v;",
     "void main(){",
     "vec3 c=texture2D(uCam,v).rgb;",
@@ -1007,7 +1025,7 @@ function initBeauty() {
     "float k=(1.0-meanVar/(meanVar+theta))*region*uStrength;",
     "k=clamp(k,0.0,0.96);",
     "vec3 color=mix(c,soft,k);",
-    "color+=(c-soft)*(0.22*(1.0-k));",
+    "color+=(c-soft)*(0.22*(1.0-k))*clamp(uStrength*8.0,0.0,1.0);",
     "float bag=clamp(m.g*(1.0-m.b),0.0,1.0)*uHasFace;",
     "float luma=dot(c,vec3(0.299,0.587,0.114));",
     "float shadow=smoothstep(0.82,0.18,luma);",
@@ -1018,6 +1036,21 @@ function initBeauty() {
     "color=clamp((color-vec3(0.026))*1.04,0.0,1.0);",
     "color=mix(color,pow(max(color,vec3(0.0)),vec3(0.80,0.84,0.90)),whiten*0.85);",
     "color.r+=0.035*whiten;",
+    "vec3 mk=texture2D(uMakeup,v).rgb;",
+    "mk+=texture2D(uMakeup,v+vec2(uTexel.x*3.0,0.0)).rgb;",
+    "mk+=texture2D(uMakeup,v-vec2(uTexel.x*3.0,0.0)).rgb;",
+    "mk+=texture2D(uMakeup,v+vec2(0.0,uTexel.y*3.0)).rgb;",
+    "mk+=texture2D(uMakeup,v-vec2(0.0,uTexel.y*3.0)).rgb;",
+    "mk/=5.0;",
+    "float lip=clamp(mk.r*uLip*uHasFace,0.0,0.88);",
+    "vec3 rose=vec3(0.80,0.30,0.32);",
+    "vec3 rosy=color*rose;",
+    "rosy=mix(rosy,vec3(min(1.0,color.r+0.10),color.g*0.78,color.b*0.72),0.42);",
+    "color=mix(color,rosy,lip);",
+    "float toothY=dot(color,vec3(0.299,0.587,0.114));",
+    "float tooth=smoothstep(0.30,0.58,toothY)*(1.0-smoothstep(0.05,0.22,max(color.r-color.g,0.0)));",
+    "vec3 pearl=vec3(toothY+0.20,toothY+0.19,toothY+0.16);",
+    "color=mix(color,pearl,clamp(mk.g*uTeeth*uHasFace*tooth,0.0,0.92));",
     "gl_FragColor=vec4(clamp(color,0.0,1.0),1.0);}"
   ].join("");
   function make(fs) {
@@ -1063,6 +1096,8 @@ function initBeauty() {
   softTex = tex();
   maskTex = tex();
   gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 1, 1, 0, gl.RGBA, gl.UNSIGNED_BYTE, new Uint8Array([0, 0, 0, 255]));
+  makeupTex = tex();
+  gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 1, 1, 0, gl.RGBA, gl.UNSIGNED_BYTE, new Uint8Array([0, 0, 0, 255]));
   blurFB = gl.createFramebuffer();
   softFB = gl.createFramebuffer();
   gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
@@ -1081,6 +1116,9 @@ function initBeauty() {
   loc.strength = gl.getUniformLocation(progC, "uStrength");
   loc.eye = gl.getUniformLocation(progC, "uEye");
   loc.face = gl.getUniformLocation(progC, "uHasFace");
+  loc.makeup = gl.getUniformLocation(progC, "uMakeup");
+  loc.lip = gl.getUniformLocation(progC, "uLip");
+  loc.teeth = gl.getUniformLocation(progC, "uTeeth");
   return true;
 }
 
@@ -1108,7 +1146,7 @@ function ensureTargets(w, h) {
 }
 
 function drawBeauty() {
-  if ((beautyAmount <= 0.01 && eyeAmount <= 0.01) || !video.videoWidth) return;
+  if (!effectOn() || !video.videoWidth) return;
   if (!initBeauty()) return;
   const w = video.videoWidth;
   const h = video.videoHeight;
@@ -1124,51 +1162,61 @@ function drawBeauty() {
       if (painted.gen !== maskUploaded) {
         gl.bindTexture(gl.TEXTURE_2D, maskTex);
         gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, painted.canvas);
+        gl.bindTexture(gl.TEXTURE_2D, makeupTex);
+        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, painted.makeup);
         maskUploaded = painted.gen;
       }
       hasFace = 1;
     }
   }
-  const radius = (2.4 + Math.max(beautyAmount, eyeAmount * 0.45) * 6.5) * Math.min(Math.max(w, h) / 900, 2.0);
-  gl.bindFramebuffer(gl.FRAMEBUFFER, blurFB);
-  gl.viewport(0, 0, w, h);
-  gl.useProgram(progH);
-  gl.activeTexture(gl.TEXTURE0);
-  gl.bindTexture(gl.TEXTURE_2D, camTex);
-  gl.uniform1i(loc.hTex, 0);
-  gl.uniform2f(loc.hTexel, 1 / w, 1 / h);
-  gl.uniform1f(loc.hRadius, radius);
-  gl.uniform1f(loc.hAxis, 0);
-  gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
-  gl.bindFramebuffer(gl.FRAMEBUFFER, softFB);
-  gl.useProgram(progV);
-  gl.bindTexture(gl.TEXTURE_2D, blurTex);
-  gl.uniform1i(loc.vTex, 0);
-  gl.uniform2f(loc.vTexel, 1 / w, 1 / h);
-  gl.uniform1f(loc.vRadius, radius);
-  gl.uniform1f(loc.vAxis, 1);
-  gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+  const needBlur = beautyAmount > 0.01 || eyeAmount > 0.01;
+  if (needBlur) {
+    const radius = (2.4 + Math.max(beautyAmount, eyeAmount * 0.45) * 6.5) * Math.min(Math.max(w, h) / 900, 2.0);
+    gl.bindFramebuffer(gl.FRAMEBUFFER, blurFB);
+    gl.viewport(0, 0, w, h);
+    gl.useProgram(progH);
+    gl.activeTexture(gl.TEXTURE0);
+    gl.bindTexture(gl.TEXTURE_2D, camTex);
+    gl.uniform1i(loc.hTex, 0);
+    gl.uniform2f(loc.hTexel, 1 / w, 1 / h);
+    gl.uniform1f(loc.hRadius, radius);
+    gl.uniform1f(loc.hAxis, 0);
+    gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+    gl.bindFramebuffer(gl.FRAMEBUFFER, softFB);
+    gl.useProgram(progV);
+    gl.bindTexture(gl.TEXTURE_2D, blurTex);
+    gl.uniform1i(loc.vTex, 0);
+    gl.uniform2f(loc.vTexel, 1 / w, 1 / h);
+    gl.uniform1f(loc.vRadius, radius);
+    gl.uniform1f(loc.vAxis, 1);
+    gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+  }
   gl.bindFramebuffer(gl.FRAMEBUFFER, null);
   gl.viewport(0, 0, w, h);
   gl.useProgram(progC);
   gl.activeTexture(gl.TEXTURE0);
   gl.bindTexture(gl.TEXTURE_2D, camTex);
   gl.activeTexture(gl.TEXTURE1);
-  gl.bindTexture(gl.TEXTURE_2D, softTex);
+  gl.bindTexture(gl.TEXTURE_2D, needBlur ? softTex : camTex);
   gl.activeTexture(gl.TEXTURE2);
   gl.bindTexture(gl.TEXTURE_2D, maskTex);
+  gl.activeTexture(gl.TEXTURE3);
+  gl.bindTexture(gl.TEXTURE_2D, makeupTex);
   gl.uniform1i(loc.cam, 0);
   gl.uniform1i(loc.soft, 1);
   gl.uniform1i(loc.mask, 2);
+  gl.uniform1i(loc.makeup, 3);
   gl.uniform2f(loc.cTexel, 1 / w, 1 / h);
   gl.uniform1f(loc.strength, beautyAmount);
   gl.uniform1f(loc.eye, eyeAmount);
   gl.uniform1f(loc.face, hasFace);
+  gl.uniform1f(loc.lip, lipAmount);
+  gl.uniform1f(loc.teeth, teethAmount);
   gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
 }
 
 function syncBeautyClass() {
-  const on = beautyAmount > 0.01 || eyeAmount > 0.01;
+  const on = effectOn();
   document.body.classList.toggle("beauty", on);
   if (on && typeof window.startFaceTracker === "function") window.startFaceTracker();
 }
@@ -1198,12 +1246,36 @@ function setEye(value) {
   drawBeauty();
 }
 
+function setLip(value) {
+  const n = Math.max(0, Math.min(100, Math.round(Number(value))));
+  lipAmount = n / 100;
+  const range = document.getElementById("lipRange");
+  if (Number(range.value) !== n) range.value = String(n);
+  document.getElementById("lipVal").textContent = n === 0 ? "关闭" : String(n);
+  syncBeautyClass();
+  if (!onBeauty()) return;
+  drawBeauty();
+}
+
+function setTeeth(value) {
+  const n = Math.max(0, Math.min(100, Math.round(Number(value))));
+  teethAmount = n / 100;
+  const range = document.getElementById("teethRange");
+  if (Number(range.value) !== n) range.value = String(n);
+  document.getElementById("teethVal").textContent = n === 0 ? "关闭" : String(n);
+  syncBeautyClass();
+  if (!onBeauty()) return;
+  drawBeauty();
+}
+
 function onBeauty() {
-  if (beautyAmount <= 0.01 && eyeAmount <= 0.01) return false;
+  if (!effectOn()) return false;
   if (!initBeauty()) {
     toast("当前环境无法开启美颜");
     beautyAmount = 0;
     eyeAmount = 0;
+    lipAmount = 0;
+    teethAmount = 0;
     document.body.classList.remove("beauty");
     return false;
   }
@@ -1219,11 +1291,15 @@ function toggleCompact(force) {
 
 document.getElementById("beautyRange").addEventListener("input", (e) => setBeauty(e.target.value));
 document.getElementById("eyeRange").addEventListener("input", (e) => setEye(e.target.value));
+document.getElementById("lipRange").addEventListener("input", (e) => setLip(e.target.value));
+document.getElementById("teethRange").addEventListener("input", (e) => setTeeth(e.target.value));
 document.getElementById("beautyLevels").addEventListener("click", (e) => {
   const btn = e.target.closest("[data-b]");
   if (!btn) return;
   setBeauty(btn.dataset.b);
   if (btn.dataset.e != null) setEye(btn.dataset.e);
+  if (btn.dataset.l != null) setLip(btn.dataset.l);
+  if (btn.dataset.t != null) setTeeth(btn.dataset.t);
 });
 document.getElementById("compact").addEventListener("click", () => toggleCompact());
 document.getElementById("compactTop").addEventListener("click", () => toggleCompact());
@@ -1248,11 +1324,15 @@ const RIGHT_EYE = [263,249,390,373,374,380,381,382,362,398,384,385,386,387,388,4
 const LEFT_LOWER = [33,7,163,144,145,153,154,155,133];
 const RIGHT_LOWER = [263,249,390,373,374,380,381,382,362];
 const LIPS = [61,146,91,181,84,17,314,405,321,375,291,308,324,318,402,317,14,87,178,88,95];
+const OUTER_LIP = [61,185,40,39,37,0,267,269,270,409,291,375,321,405,314,17,84,181,91,146];
+const INNER_LIP = [78,191,80,81,82,13,312,311,310,415,308,324,318,402,317,14,87,178,88,95];
 const LBROW = [70,63,105,66,107,55,65,52,53,46];
 const RBROW = [300,293,334,296,336,285,295,282,283,276];
 
 const mask = document.createElement("canvas");
 const mctx = mask.getContext("2d");
+const makeup = document.createElement("canvas");
+const xctx = makeup.getContext("2d");
 let landmarker = null;
 let loading = null;
 let points = null;
@@ -1261,16 +1341,20 @@ let failed = false;
 let maskGen = 0;
 let stamp = 0;
 
-function shape(indices, pts, w, h) {
-  mctx.beginPath();
+function shapeOn(ctx, indices, pts, w, h) {
+  ctx.beginPath();
   indices.forEach((index, n) => {
     const p = pts[index];
     const x = p.x * w;
     const y = p.y * h;
-    if (n === 0) mctx.moveTo(x, y);
-    else mctx.lineTo(x, y);
+    if (n === 0) ctx.moveTo(x, y);
+    else ctx.lineTo(x, y);
   });
-  mctx.closePath();
+  ctx.closePath();
+}
+
+function shape(indices, pts, w, h) {
+  shapeOn(mctx, indices, pts, w, h);
 }
 
 function underEye(indices, pts, w, h) {
@@ -1313,6 +1397,27 @@ function redraw(w, h) {
   mctx.fill();
   shape(RBROW, points, w, h);
   mctx.fill();
+  if (makeup.width !== w || makeup.height !== h) {
+    makeup.width = w;
+    makeup.height = h;
+  }
+  xctx.setTransform(1, 0, 0, 1, 0, 0);
+  xctx.globalCompositeOperation = "source-over";
+  xctx.clearRect(0, 0, w, h);
+  xctx.fillStyle = "#ff0000";
+  shapeOn(xctx, OUTER_LIP, points, w, h);
+  xctx.fill();
+  xctx.globalCompositeOperation = "destination-out";
+  shapeOn(xctx, INNER_LIP, points, w, h);
+  xctx.fill();
+  xctx.globalCompositeOperation = "source-over";
+  const mouthW = Math.hypot(points[61].x - points[291].x, points[61].y - points[291].y);
+  const mouthH = Math.hypot(points[13].x - points[14].x, points[13].y - points[14].y);
+  if (mouthW > 0.001 && mouthH / mouthW > 0.16) {
+    xctx.fillStyle = "#00ff00";
+    shapeOn(xctx, INNER_LIP, points, w, h);
+    xctx.fill();
+  }
   maskGen++;
 }
 
@@ -1397,7 +1502,7 @@ window.paintFaceMaskSync = function (videoEl) {
       try { detectNow(videoEl); } finally { tracking = false; }
     }, 0);
   }
-  return points ? { canvas: mask, gen: maskGen } : null;
+  return points ? { canvas: mask, makeup, gen: maskGen } : null;
 };
 </script>
 </body>
