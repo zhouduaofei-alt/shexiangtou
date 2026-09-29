@@ -957,6 +957,7 @@ let blurFB = null;
 let softFB = null;
 let viewW = 0;
 let viewH = 0;
+let maskUploaded = -1;
 const loc = {};
 
 function initBeauty() {
@@ -976,14 +977,12 @@ function initBeauty() {
     "uniform sampler2D uTex;uniform vec2 uTexel;uniform float uRadius;uniform float uAxis;",
     "varying vec2 v;",
     "void main(){",
-    "vec3 c=texture2D(uTex,v).rgb;vec3 sum=c;float wsum=1.0;",
-    "for(int i=1;i<=6;i++){",
-    "float fi=float(i);",
+    "vec3 sum=texture2D(uTex,v).rgb*0.18;float w=0.18;",
+    "for(int i=1;i<=8;i++){",
+    "float fi=float(i);float gw=exp(-fi*fi/18.0);",
     "vec2 o=vec2(uTexel.x*(1.0-uAxis),uTexel.y*uAxis)*fi*uRadius;",
-    "vec3 a=texture2D(uTex,v+o).rgb;vec3 b=texture2D(uTex,v-o).rgb;",
-    "float wa=exp(-dot(a-c,a-c)*14.0);float wb=exp(-dot(b-c,b-c)*14.0);",
-    "sum+=a*wa+b*wb;wsum+=wa+wb;}",
-    "gl_FragColor=vec4(sum/wsum,1.0);}"
+    "sum+=texture2D(uTex,v+o).rgb*gw;sum+=texture2D(uTex,v-o).rgb*gw;w+=gw*2.0;}",
+    "gl_FragColor=vec4(sum/w,1.0);}"
   ].join("");
   const compFS = [
     "precision mediump float;",
@@ -994,29 +993,31 @@ function initBeauty() {
     "vec3 c=texture2D(uCam,v).rgb;",
     "vec3 soft=texture2D(uSoft,v).rgb;",
     "vec3 m=texture2D(uMask,v).rgb;",
-    "m+=texture2D(uMask,v+vec2(uTexel.x*6.0,0.0)).rgb*0.35;",
-    "m+=texture2D(uMask,v-vec2(uTexel.x*6.0,0.0)).rgb*0.35;",
-    "m+=texture2D(uMask,v+vec2(0.0,uTexel.y*6.0)).rgb*0.35;",
-    "m+=texture2D(uMask,v-vec2(0.0,uTexel.y*6.0)).rgb*0.35;",
-    "m/=2.4;",
-    "float lumaC=dot(c,vec3(0.299,0.587,0.114));",
-    "float lumaS=dot(soft,vec3(0.299,0.587,0.114));",
-    "float edge=smoothstep(0.012,0.08,abs(lumaC-lumaS));",
-    "float faceSkin=m.r*(1.0-m.b);",
-    "float skin=mix(1.0-edge,faceSkin,uHasFace);",
-    "float bag=m.g*(1.0-m.b)*uHasFace;",
-    "float high=lumaC-lumaS;",
-    "float smoothAmt=uStrength*skin*mix(0.78,1.0,bag);",
-    "vec3 color=mix(c,soft,clamp(smoothAmt,0.0,0.92));",
-    "color+=vec3(high*mix(0.7,0.16,bag)*(uHasFace>0.5?skin:1.0));",
-    "float shadow=smoothstep(0.72,0.25,lumaC);",
-    "vec3 filled=soft+vec3(0.07,0.05,0.035)*(1.0-lumaS);",
-    "color=mix(color,filled,clamp(bag*uEye*shadow,0.0,0.82));",
-    "color.r+=0.03*bag*uEye;color.b-=0.04*bag*uEye*shadow;",
-    "float whiten=uStrength*(uHasFace>0.5?skin:0.55)*(1.0-lumaC);",
-    "color+=vec3(0.085,0.07,0.055)*whiten;",
-    "color.r+=0.02*uStrength*(uHasFace>0.5?skin:0.4);",
-    "color=(color-0.5)*mix(1.0,0.94,uStrength)+0.5;",
+    "m+=texture2D(uMask,v+vec2(uTexel.x*8.0,0.0)).rgb;",
+    "m+=texture2D(uMask,v-vec2(uTexel.x*8.0,0.0)).rgb;",
+    "m+=texture2D(uMask,v+vec2(0.0,uTexel.y*8.0)).rgb;",
+    "m+=texture2D(uMask,v-vec2(0.0,uTexel.y*8.0)).rgb;",
+    "m/=5.0;",
+    "float meanVar=dot(abs(c-soft),vec3(0.3333));",
+    "float theta=0.10;",
+    "float protect=m.b*uHasFace;",
+    "float skinGate=clamp((min(c.r,soft.r-0.06)-0.16)*4.8,0.0,1.0);",
+    "float faceSkin=clamp(m.r*(1.0-m.b),0.0,1.0)*uHasFace;",
+    "float region=max(skinGate*(1.0-protect),faceSkin);",
+    "float k=(1.0-meanVar/(meanVar+theta))*region*uStrength;",
+    "k=clamp(k,0.0,0.96);",
+    "vec3 color=mix(c,soft,k);",
+    "color+=(c-soft)*(0.22*(1.0-k));",
+    "float bag=clamp(m.g*(1.0-m.b),0.0,1.0)*uHasFace;",
+    "float luma=dot(c,vec3(0.299,0.587,0.114));",
+    "float shadow=smoothstep(0.82,0.18,luma);",
+    "vec3 lifted=soft+vec3(0.12,0.085,0.06)*(1.0-dot(soft,vec3(0.299,0.587,0.114)));",
+    "color=mix(color,lifted,clamp(bag*uEye*(0.55+0.45*shadow),0.0,0.92));",
+    "color.b-=0.05*bag*uEye*shadow;",
+    "float whiten=uStrength*region;",
+    "color=clamp((color-vec3(0.026))*1.04,0.0,1.0);",
+    "color=mix(color,pow(max(color,vec3(0.0)),vec3(0.80,0.84,0.90)),whiten*0.85);",
+    "color.r+=0.035*whiten;",
     "gl_FragColor=vec4(clamp(color,0.0,1.0),1.0);}"
   ].join("");
   function make(fs) {
@@ -1120,12 +1121,15 @@ function drawBeauty() {
   if (typeof window.paintFaceMaskSync === "function") {
     const painted = window.paintFaceMaskSync(video);
     if (painted) {
-      gl.bindTexture(gl.TEXTURE_2D, maskTex);
-      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, painted);
+      if (painted.gen !== maskUploaded) {
+        gl.bindTexture(gl.TEXTURE_2D, maskTex);
+        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, painted.canvas);
+        maskUploaded = painted.gen;
+      }
       hasFace = 1;
     }
   }
-  const radius = (1.15 + Math.max(beautyAmount, eyeAmount * 0.65) * 2.6) * Math.min(Math.max(w, h) / 720, 2.4);
+  const radius = (2.4 + Math.max(beautyAmount, eyeAmount * 0.45) * 6.5) * Math.min(Math.max(w, h) / 900, 2.0);
   gl.bindFramebuffer(gl.FRAMEBUFFER, blurFB);
   gl.viewport(0, 0, w, h);
   gl.useProgram(progH);
@@ -1252,9 +1256,10 @@ const mctx = mask.getContext("2d");
 let landmarker = null;
 let loading = null;
 let points = null;
-let lastDetect = 0;
 let seenAt = 0;
 let failed = false;
+let maskGen = 0;
+let stamp = 0;
 
 function shape(indices, pts, w, h) {
   mctx.beginPath();
@@ -1276,7 +1281,7 @@ function underEye(indices, pts, w, h) {
     minY = Math.min(minY, p.y);
     maxY = Math.max(maxY, p.y);
   });
-  const drop = Math.max(8, (maxY - minY) * 1.45);
+  const drop = Math.max(10, (maxY - minY) * 2.2);
   mctx.beginPath();
   top.forEach((p, n) => n === 0 ? mctx.moveTo(p.x, p.y) : mctx.lineTo(p.x, p.y));
   for (let i = top.length - 1; i >= 0; i--) mctx.lineTo(top[i].x, top[i].y + drop);
@@ -1308,6 +1313,7 @@ function redraw(w, h) {
   mctx.fill();
   shape(RBROW, points, w, h);
   mctx.fill();
+  maskGen++;
 }
 
 async function ensureTracker() {
@@ -1315,17 +1321,24 @@ async function ensureTracker() {
   if (loading) return loading;
   loading = (async () => {
     const files = await FilesetResolver.forVisionTasks("/vendor/wasm");
-    landmarker = await FaceLandmarker.createFromOptions(files, {
+    const opts = (delegate) => ({
       baseOptions: {
         modelAssetPath: "/vendor/face_landmarker.task",
-        delegate: "GPU"
+        delegate
       },
       runningMode: "VIDEO",
       numFaces: 1,
-      minFaceDetectionConfidence: 0.5,
-      minFacePresenceConfidence: 0.5,
-      minTrackingConfidence: 0.5
+      outputFaceBlendshapes: false,
+      outputFacialTransformationMatrixes: false,
+      minFaceDetectionConfidence: 0.4,
+      minFacePresenceConfidence: 0.4,
+      minTrackingConfidence: 0.4
     });
+    try {
+      landmarker = await FaceLandmarker.createFromOptions(files, opts("GPU"));
+    } catch (_) {
+      landmarker = await FaceLandmarker.createFromOptions(files, opts("CPU"));
+    }
     return landmarker;
   })().catch(() => {
     failed = true;
@@ -1338,33 +1351,53 @@ async function ensureTracker() {
 
 window.startFaceTracker = function () { ensureTracker(); };
 
-window.paintFaceMaskSync = function (videoEl) {
+const small = document.createElement("canvas");
+const sctx = small.getContext("2d", { willReadFrequently: true });
+let tracking = false;
+
+function detectNow(videoEl) {
   const w = videoEl.videoWidth;
   const h = videoEl.videoHeight;
-  if (!w || !landmarker) return points ? mask : null;
-  const now = performance.now();
-  if (now - lastDetect > 80) {
-    lastDetect = now;
-    let result = null;
-    try { result = landmarker.detectForVideo(videoEl, now); } catch (_) { result = null; }
-    const found = result && result.faceLandmarks && result.faceLandmarks[0];
-    if (found) {
-      const raw = found;
-      seenAt = now;
-      if (!points || points.length !== raw.length) {
-        points = raw.map((p) => ({ x: p.x, y: p.y }));
-      } else {
-        for (let i = 0; i < raw.length; i++) {
-          points[i].x += (raw[i].x - points[i].x) * 0.5;
-          points[i].y += (raw[i].y - points[i].y) * 0.5;
-        }
-      }
-      redraw(w, h);
-    } else if (now - seenAt > 500) {
-      points = null;
-    }
+  if (!w || !landmarker) return;
+  const tw = 256;
+  const th = Math.max(108, Math.round(h * tw / w));
+  if (small.width !== tw || small.height !== th) {
+    small.width = tw;
+    small.height = th;
   }
-  return points ? mask : null;
+  sctx.drawImage(videoEl, 0, 0, tw, th);
+  const now = performance.now();
+  stamp = now > stamp ? now : stamp + 1;
+  let result = null;
+  try { result = landmarker.detectForVideo(small, stamp); } catch (_) { result = null; }
+  const found = result && result.faceLandmarks && result.faceLandmarks[0];
+  if (found) {
+    const raw = found;
+    seenAt = now;
+    if (!points || points.length !== raw.length) {
+      points = raw.map((p) => ({ x: p.x, y: p.y }));
+    } else {
+      const jump = Math.hypot(raw[1].x - points[1].x, raw[1].y - points[1].y);
+      const alpha = jump > 0.012 ? 1 : 0.9;
+      for (let i = 0; i < raw.length; i++) {
+        points[i].x += (raw[i].x - points[i].x) * alpha;
+        points[i].y += (raw[i].y - points[i].y) * alpha;
+      }
+    }
+    redraw(w, h);
+  } else if (now - seenAt > 280) {
+    points = null;
+  }
+}
+
+window.paintFaceMaskSync = function (videoEl) {
+  if (landmarker && videoEl.videoWidth && !tracking) {
+    tracking = true;
+    setTimeout(() => {
+      try { detectNow(videoEl); } finally { tracking = false; }
+    }, 0);
+  }
+  return points ? { canvas: mask, gen: maskGen } : null;
 };
 </script>
 </body>
